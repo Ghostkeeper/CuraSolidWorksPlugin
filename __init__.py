@@ -7,6 +7,16 @@ third_party_dir = os.path.join(os.path.split(__file__)[0], "3rd_party")
 if os.path.isdir(third_party_dir):
     sys.path.append(third_party_dir)
 
+win32_dir = os.path.join(os.path.split(__file__)[0], "3rd_party", "win32")
+if os.path.isdir(win32_dir):
+    sys.path.append(win32_dir)
+win32_dir = os.path.join(os.path.split(__file__)[0], "3rd_party", "win32", "lib")
+if os.path.isdir(win32_dir):
+    sys.path.append(win32_dir)
+win32_dir = os.path.join(os.path.split(__file__)[0], "3rd_party", "pypiwin32_system32")
+if os.path.isdir(win32_dir):
+    sys.path.append(win32_dir)
+
 from UM.Platform import Platform
 
 from UM.i18n import i18nCatalog
