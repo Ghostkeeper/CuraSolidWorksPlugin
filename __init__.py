@@ -1,5 +1,12 @@
 # Copyright (c) 2016 Thomas Karl Pietrowski
 
+import os
+import sys
+
+third_party_dir = os.path.join(os.path.split(__file__)[0], "3rd_party")
+if os.path.isdir(third_party_dir):
+    sys.path.append(third_party_dir)
+
 from UM.Platform import Platform
 
 from UM.i18n import i18nCatalog
