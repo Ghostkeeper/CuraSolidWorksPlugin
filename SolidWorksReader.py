@@ -53,8 +53,19 @@ def is_software_revision(major_version):
         has_coinited = True
     except:
         has_coinited = False
-    app_instance = ComConnector.CreateClassObject("SldWorks.Application.{}".format(major_version))
+    
+    service_name = "SldWorks.Application.{}".format(major_version)
+    try:
+        app_instance = ComConnector.CreateActiveObject(service_name)
+        app_was_active = True
+    except:
+        app_instance = ComConnector.CreateClassObject(service_name)
+        app_was_active = False
+    
     revision_number = app_instance.RevisionNumber
+    if not app_was_active:
+        app_instance.ExitApp()
+    
     del(app_instance)
     if has_coinited:
         ComConnector.UnCoInit()
@@ -358,6 +369,8 @@ class SolidWorksReader(CommonCOMReader):
         options["sw_model_title"] = self.getDocumentTitleByFilepath(options, options["foreignFile"])
         
         error = ctypes.c_int()
+        
+        # SolidWorks API: >= 20.0.x
         options["app_instance"].ActivateDoc3(options["sw_model_title"],
                                              True,
                                              SolidWorksEnums.swRebuildOnActivation_e.swDontRebuildActiveDoc,
