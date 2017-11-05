@@ -63,12 +63,16 @@ def is_software_revision(major_version):
         app_was_active = False
     
     revision_number = app_instance.RevisionNumber
+    if callable(revision_number):
+        revision_number = revision_number()
+    
     if not app_was_active:
         app_instance.ExitApp()
     
     del(app_instance)
     if has_coinited:
         ComConnector.UnCoInit()
+    
     if isinstance(revision_number, str):
         revision_splitted = [int(x) for x in revision_number.split(".")]
         if revision_splitted[0] == major_version:
@@ -77,6 +81,7 @@ def is_software_revision(major_version):
             Logger.log("e", "Revision does not fit to {}.x.y: {}".format(major_version, revision_number))
     else:
         Logger.log("e", "Wrong datatype: {}".format(repr(revision_number)))
+    
     return False
     
 def is_software_install_path(major_version):
@@ -209,11 +214,15 @@ class SolidWorksReader(CommonCOMReader):
 
         # Keep SolidWorks frame invisible when ISldWorks::ActivateDoc2 is called
         options["app_frame"] = options["app_instance"].Frame
-        options["app_frame_invisible"] = options["app_frame"].KeepInvisible
-        options["app_frame"].KeepInvisible = True
+        if "KeepInvisible" in dir(options["app_frame"]):
+            options["app_frame_invisible"] = options["app_frame"].KeepInvisible
+            options["app_frame"].KeepInvisible = True
 
         # Getting revision after starting
         revision_number = options["app_instance"].RevisionNumber
+    
+        if callable(revision_number):
+            revision_number = revision_number()
     
         # Sometimes it can happen that the revision number returned here is None
         # TODO: Ask DessaultSystemes how it comes and how to get the value properly without any issues..
@@ -291,10 +300,17 @@ class SolidWorksReader(CommonCOMReader):
     def getOpenDocuments(self, options):
         open_files = []
         open_file = options["app_instance"].GetFirstDocument
+        
         while open_file:
             open_files.append(open_file)
-            open_file = open_file.GetNext
-        Logger.log("i", "Found {} open files..".format(len(open_files)))
+            open_file = None
+            
+            if "GetNext" in dir(open_file):
+                open_files.append(open_file)
+                open_file = open_file.GetNext
+            else:
+                Logger.log("w", "No .GetNext in document!")
+        Logger.log("i", "Found {} open files..".format(len(open_files), ["file", "files"][len(open_files) == 1]))
         return open_files
 
     def getOpenDocumentFilepathDict(self, options):
@@ -307,8 +323,10 @@ class SolidWorksReader(CommonCOMReader):
         open_files = self.getOpenDocuments(options)
         open_file_paths = {}
         for open_file in open_files:
-            open_file_paths[os.path.normpath(open_file.GetPathName)] = open_file
-            open_file = open_file.GetNext
+            if "GetPathName" in dir(open_file):
+                open_file_paths[os.path.normpath(open_file.GetPathName)] = open_file
+            if "GetNext" in dir(open_file):
+                open_file = open_file.GetNext
         return open_file_paths
 
     def getDocumentTitleByFilepath(self, options, filepath):
@@ -369,12 +387,16 @@ class SolidWorksReader(CommonCOMReader):
         options["sw_model_title"] = self.getDocumentTitleByFilepath(options, options["foreignFile"])
         
         error = ctypes.c_int()
+        error_ref = ctypes.byref(error)
         
         # SolidWorks API: >= 20.0.x
+        Logger.log("d", 'options["sw_model_title"]: ' + repr(options["sw_model_title"]))
+        Logger.log("d", 'SolidWorksEnums.swRebuildOnActivation_e.swDontRebuildActiveDoc: ' + repr(SolidWorksEnums.swRebuildOnActivation_e.swDontRebuildActiveDoc))
+        Logger.log("d", '0: ' + repr(0))
         options["app_instance"].ActivateDoc3(options["sw_model_title"],
                                              True,
                                              SolidWorksEnums.swRebuildOnActivation_e.swDontRebuildActiveDoc,
-                                             ctypes.byref(error)
+                                             0
                                              )
 
         # Might be useful in the future, but no need for this ATM
